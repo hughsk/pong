@@ -1,5 +1,6 @@
 var _ = require('underscore'),
 	ansi = require('ansi'),
+	io = require('socket.io-client'),
 	BufferStream = require('./bufferstream.js'),
 	argv, optimist,
 	Pong, Paddle, Ball;
@@ -10,7 +11,9 @@ optimist = require('optimist')
 	.alias('H', 'height').describe('H', 'Set the height of the playing field').default('H', 24)
 	.alias('b', 'beep').describe('b', 'Enable beeping').boolean('b').default('b', false)
 	.alias('h', 'help').describe('h', 'Help!').boolean('h')
-	.alias('s', 'safer').describe('s', 'Safer output for running over SSH/Mosh/etc.')
+	.alias('s', 'safer').describe('s', 'Safer output for running over SSH/Mosh/etc.').boolean('s').default('s', false)
+	.alias('S', 'server').describe('S', 'Host a Pong server instead of playing Pong.')
+	.alias('c', 'connect').describe('c', 'Connect to another Pong server')
 	
 argv = optimist.argv;
 
@@ -60,7 +63,8 @@ Pong = function(output, input, options) {
 	this.options = _(options || {}).defaults({
 		width: argv.W,
 		height: argv.H,
-		beep: argv.beep
+		beep: argv.beep,
+		independent: true
 	});
 
 	this.ourPaddle = new Paddle(this, 1, (this.options.height / 2) | 0);
@@ -78,6 +82,22 @@ module.exports = Pong;
  * Runs once every frame the game is playing.
  */
 Pong.prototype.tick = function() {
+	var output = this.output;
+
+	// Move "their" paddle towards the ball,
+	// with a maximum speed of 1 character/second.
+	if (this.independent) {
+		this.theirPaddle.y += Math.round(Math.max(
+			Math.min(this.ball.y - this.theirPaddle.y, 1), -1
+		));
+	}
+
+	// Move the ball. It's ok the paddle moves first,
+	// it's less accurate that way.
+	this.ball.tick(output);
+};
+
+Pong.prototype.draw = function() {
 	var self = this,
 		output = this.output,
 		height = this.options.height,
@@ -110,12 +130,6 @@ Pong.prototype.tick = function() {
 		.write("THEM "+this.theirScore)
 		.write('\n')
 
-	// Move "their" paddle towards the ball,
-	// with a maximum speed of 1 character/second.
-	this.theirPaddle.y += Math.round(Math.max(
-		Math.min(this.ball.y - this.theirPaddle.y, 1), -1
-	));
-
 	// Draw the objects
 	this.ourPaddle.draw(output);
 	this.theirPaddle.draw(output);
@@ -123,8 +137,8 @@ Pong.prototype.tick = function() {
 
 	// Instructions
 	output.goto(0, height + 3);
-	output.write('W: Move up  S: Move down  Q: Quit\nSHIFT: Hold to move faster');
-
+	output.write('W: Move up  S: Move down  Q: Quit\nSHIFT: Hold to move faster\n');
+	
 	this.buffer.flush();
 };
 
@@ -141,21 +155,18 @@ Pong.prototype.beep = Pong.prototype.bloop = function() {
  * Start running the game, setting up timers and event listeners.
  * Can/should only be run once.
  */
-Pong.prototype.start = function() {
+Pong.prototype.start = function(host) {
 	if (this.interval) { return false; }
 
 	var self = this;
 
 	this.interval = setInterval(function(){
-		self.tick()
+		self.tick();
+		self.draw();
 	}, 120);
 
 	// Keyboard input.
 	this.input.on('keypress', function(keyChar, keyInfo) {
-		self.output.goto(0, self.options.height + 4);
-		if (keyChar === '\u0003' || keyChar === 'q') {
-			process.exit(keyChar === 'q' ? 0 : 1);
-		}
 		if (keyInfo && keyInfo.name) {
 			switch (keyInfo.name) {
 				case 'w':
@@ -171,6 +182,17 @@ Pong.prototype.start = function() {
 	});
 
 	return this;
+};
+
+Pong.prototype.setupExitKeys = function() {
+	var self = this;
+
+	this.input.on('keypress', function(keyChar, keyInfo) {
+		self.output.goto(0, self.options.height + 4);
+		if (keyChar === '\u0003' || keyChar === 'q') {
+			process.exit(keyChar === 'q' ? 0 : 1);
+		}
+	});
 };
 
 /**
@@ -244,7 +266,7 @@ Ball = function(game, x, y) {
  * of the ball.
  * @param  {WriteableStream} output The stream to write to. Should be the same as `game`s.
  */
-Ball.prototype.draw = function(output) {
+Ball.prototype.tick = function(output) {
 	var game = this.game,
 		height = game.options.height,
 		width = game.options.width,
@@ -284,12 +306,55 @@ Ball.prototype.draw = function(output) {
 			return game.ball = new Ball(game, (width/2)|0, (height/2)|0);
 		}
 	}
+};
 
+Ball.prototype.draw = function(output) {
 	// Actually draw the ball
 	output.goto(this.x | 0, this.y | 0)
-	if (argv.safe) {
+	if (argv.safer) {
 		output.bg.white().write('0').bg.reset();
 	} else {
 		output.write('⬛');
 	}
+};
+
+Pong.prototype.connect = function(host) {
+	var self = this;
+
+	this.setupExitKeys();
+
+	host = typeof host === 'string' ? host : 'http://localhost:12953';
+	console.log('Trying to connect to', host + '...');
+
+	this.server = io.connect(host);
+	this.server.on('connect', function() {
+		console.log('Connected! Waiting for a game...');
+	});
+	this.server.once('ready', function() {
+		console.log('Found another player, should be ready to go!');
+
+		// Setup keyboard input
+		self.input.on('keypress', function(keyChar, keyInfo) {
+			if (keyInfo && keyInfo.name) {
+				switch (keyInfo.name) {
+					case 'w': self.server.emit('up', keyInfo.shift ? true : false); break;
+					case 's': self.server.emit('down', keyInfo.shift ? true : false); break;
+				}
+			}
+		});
+	});
+	this.server.on('tick', function(data) {
+		self.theirPaddle.y = data.theirY;
+		self.ourPaddle.y = data.ourY;
+		self.ball.x = data.ballX;
+		self.ball.y = data.ballY;
+		self.ourScore = data.ourScore;
+		self.theirScore = data.theirScore;
+		self.draw();
+	});
+	this.server.once('disconnect', function() {
+		console.log('One of you disconnected from the server. Quitting!');
+		self.server.disconnect();
+		process.exit(0);
+	});
 };

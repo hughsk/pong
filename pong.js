@@ -16,9 +16,12 @@ clearScreen(output);
 process.openStdin();
 tty.setRawMode(true);
 
+output.hide();
+
 var game = pong(output, process.stdin)
 	.start();
 
 process.on('exit', function(status) {
 	clearScreen(output);
+	output.show();
 });

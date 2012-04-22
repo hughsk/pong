@@ -1,4 +1,6 @@
 var _ = require('underscore'),
+	ansi = require('ansi'),
+	BufferStream = require('./bufferstream.js'),
 	argv, optimist,
 	Pong, Paddle, Ball;
 
@@ -8,6 +10,7 @@ optimist = require('optimist')
 	.alias('H', 'height').describe('H', 'Set the height of the playing field').default('H', 24)
 	.alias('b', 'beep').describe('b', 'Enable beeping').boolean('b').default('b', false)
 	.alias('h', 'help').describe('h', 'Help!').boolean('h')
+	.alias('s', 'safer').describe('s', 'Safer output for running over SSH/Mosh/etc.')
 	
 argv = optimist.argv;
 
@@ -47,7 +50,12 @@ Pong = function(output, input, options) {
 		return new Pong(output, input, options);
 	}
 
-	this.output = output;
+	this.buffer = new BufferStream(output);
+	this.output = ansi(this.buffer);
+	this.buffer.on('data', function(data) {
+		output.write(data);
+	});
+
 	this.input = input;
 	this.options = _(options || {}).defaults({
 		width: argv.W,
@@ -115,7 +123,9 @@ Pong.prototype.tick = function() {
 
 	// Instructions
 	output.goto(0, height + 3);
-	console.log('W: Move up  S: Move down  Q: Quit\nSHIFT: Hold to move faster');
+	output.write('W: Move up  S: Move down  Q: Quit\nSHIFT: Hold to move faster');
+
+	this.buffer.flush();
 };
 
 /**
@@ -275,7 +285,11 @@ Ball.prototype.draw = function(output) {
 		}
 	}
 
-	output
-		.goto(this.x | 0, this.y | 0)
-		.write('⬛');
+	// Actually draw the ball
+	output.goto(this.x | 0, this.y | 0)
+	if (argv.safe) {
+		output.bg.white().write('0').bg.reset();
+	} else {
+		output.write('⬛');
+	}
 };

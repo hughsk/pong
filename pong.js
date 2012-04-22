@@ -18,7 +18,7 @@ tty.setRawMode(true);
 
 output.hide();
 
-var game = pong(output, process.stdin)
+var game = pong(process.stdout, process.stdin)
 	.start();
 
 process.on('exit', function(status) {

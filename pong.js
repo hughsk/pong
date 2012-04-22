@@ -35,6 +35,7 @@ if (argv.connect) { // Multiplayer client!
 if (!argv.server) { // Local game!
 	game = pong(process.stdout, process.stdin)
 		.start();
+	game.setupExitKeys();
 }
 
 // Everybody does this regardless.

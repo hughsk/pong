@@ -1,12 +1,12 @@
 var _ = require('underscore'),
 	ansi = require('ansi'),
-	io = require('socket.io-client'),
+	io = require('socket.io/node_modules/socket.io-client'),
 	BufferStream = require('./bufferstream.js'),
 	argv, optimist,
 	Pong, Paddle, Ball;
 
 optimist = require('optimist')
-	.usage('Usage: $0 [--beep|--help|--width <number>|--height <number>]')
+	.usage('Usage: $0 [-b|-h|-s|-W <width>|-H <height>|-S <port>|-c <host>]')
 	.alias('W', 'width').describe('W', 'Set the width of the playing field').default('W', 80)
 	.alias('H', 'height').describe('H', 'Set the height of the playing field').default('H', 24)
 	.alias('b', 'beep').describe('b', 'Enable beeping').boolean('b').default('b', false)
@@ -79,7 +79,8 @@ Pong = function(output, input, options) {
 module.exports = Pong;
 
 /**
- * Runs once every frame the game is playing.
+ * Runs once every frame the game is playing, dishing
+ * out the game logic.
  */
 Pong.prototype.tick = function() {
 	var output = this.output;
@@ -97,6 +98,10 @@ Pong.prototype.tick = function() {
 	this.ball.tick(output);
 };
 
+/**
+ * Should be called once every frame, after tick. Used
+ * to update the screen with new contents.
+ */
 Pong.prototype.draw = function() {
 	var self = this,
 		output = this.output,
@@ -184,6 +189,9 @@ Pong.prototype.start = function(host) {
 	return this;
 };
 
+/**
+ * Allow for quitting using Q, or "force quitting" with CTRL+C
+ */
 Pong.prototype.setupExitKeys = function() {
 	var self = this;
 
@@ -262,9 +270,9 @@ Ball = function(game, x, y) {
 };
 
 /**
- * Called every frame, and controls the movement/collisions/drawing
+ * Called every frame, and controls the movement/collisions
  * of the ball.
- * @param  {WriteableStream} output The stream to write to. Should be the same as `game`s.
+ * 
  */
 Ball.prototype.tick = function(output) {
 	var game = this.game,
@@ -308,6 +316,11 @@ Ball.prototype.tick = function(output) {
 	}
 };
 
+/**
+ * Used to draw the ball on the screen.
+ *  
+ * @param  {WriteableStream} output The stream to write to. Should be the same as `game`s.
+ */
 Ball.prototype.draw = function(output) {
 	// Actually draw the ball
 	output.goto(this.x | 0, this.y | 0)
@@ -318,6 +331,10 @@ Ball.prototype.draw = function(output) {
 	}
 };
 
+/**
+ * An alternative to #start, that connects to a Pong server.
+ * @param  {String} host The host to connect to using socket.io. Defaults to the big shared one.
+ */
 Pong.prototype.connect = function(host) {
 	var self = this;
 

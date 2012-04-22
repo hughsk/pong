@@ -340,7 +340,7 @@ Pong.prototype.connect = function(host) {
 
 	this.setupExitKeys();
 
-	host = typeof host === 'string' ? host : 'http://localhost:12953';
+	host = typeof host === 'string' ? host : 'http://pong.hughskennedy.com:12953';
 	console.log('Trying to connect to', host + '...');
 
 	this.server = io.connect(host);

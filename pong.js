@@ -7,9 +7,11 @@ var ansi = require('ansi'),
 	output = ansi(process.stdout);
 
 var clearScreen = function(output) {
-	output.write(Array.apply(null, Array(process.stdout.getWindowSize()[1])).map(function(){return '\n'}).join(''))
-		.eraseData(2)
-		.goto(0, 0)
+	if (process.stdout.getWindowSize) {
+		output.write(Array.apply(null, Array(process.stdout.getWindowSize()[1])).map(function(){return '\n'}).join(''))
+			.eraseData(2)
+			.goto(0, 0)
+	}
 };
 
 

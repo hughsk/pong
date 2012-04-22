@@ -4,7 +4,8 @@
   "description": "Pong in your terminal. Why not?",
   "version": "0.0.2",
   "repository": {
-    "url": ""
+    "type": "git",
+    "url": "git@github.com:hughsk/pong.git"
   },
   "scripts": {
     "start": "./pong.js"

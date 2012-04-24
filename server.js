@@ -10,7 +10,6 @@ module.exports = function(port) {
 	io.sockets.on('connection', function(socket) {
 		var matchedSocket = socketQueue[0];
 
-
 		console.log('Player', socket.id, 'connected to the server');
 
 		if (matchedSocket) {
@@ -40,10 +39,10 @@ module.exports = function(port) {
 		socket2.emit('ready', { width: game.options.width, height: game.options.height });
 
 		// Paddle Movement
-		socket1.on('up', function(fast) { game.ourPaddle.y -= !!fast ? 2: 1; });
-		socket2.on('up', function(fast) { game.theirPaddle.y -= !!fast ? 2: 1; });
-		socket1.on('down', function(fast) { game.ourPaddle.y += !!fast ? 2: 1; });
-		socket2.on('down', function(fast) { game.theirPaddle.y += !!fast ? 2: 1; });
+		socket1.on('up', function(fast)   { game.ourPaddle.y   -= !!fast ? 2: 1; game.ourPaddle.clamp();   });
+		socket2.on('up', function(fast)   { game.theirPaddle.y -= !!fast ? 2: 1; game.theirPaddle.clamp(); });
+		socket1.on('down', function(fast) { game.ourPaddle.y   += !!fast ? 2: 1; game.ourPaddle.clamp();   });
+		socket2.on('down', function(fast) { game.theirPaddle.y += !!fast ? 2: 1; game.theirPaddle.clamp(); });
 
 		// Game tick. Essentially, move the ball and 
 		// update the positions of the paddle. Not really great network programming

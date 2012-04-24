@@ -79,10 +79,11 @@ Pong.prototype.tick = function() {
 
 	// Move "their" paddle towards the ball,
 	// with a maximum speed of 1 character/second.
-	if (this.independent) {
+	if (this.options.independent) {
 		this.theirPaddle.y += Math.round(Math.max(
 			Math.min(this.ball.y - this.theirPaddle.y, 1), -1
 		));
+		this.theirPaddle.clamp();
 	}
 
 	// Move the ball. It's ok the paddle moves first,
@@ -168,11 +169,11 @@ Pong.prototype.start = function(host) {
 			switch (keyInfo.name) {
 				case 'w':
 					self.ourPaddle.y -= keyInfo.shift ? 2 : 1;
-					self.ourPaddle.y = Math.max(self.ourPaddle.y, 3);
+					self.ourPaddle.clamp();
 				break;
 				case 's':
 					self.ourPaddle.y += keyInfo.shift ? 2 : 1;
-					self.ourPaddle.y = Math.min(self.ourPaddle.y, self.options.height - 2);
+					self.ourPaddle.clamp();
 				break;
 			}
 		}
@@ -220,8 +221,9 @@ Paddle = function(game, x, y) {
 		return new Paddle(game, x, y);
 	}
 	this.x = x; this.y = y;
+	this.game = game;
 	return this;
-}
+};
 
 /**
  * Runs every frame on each paddle.
@@ -236,6 +238,14 @@ Paddle.prototype.draw = function(output) {
 		currHeight += 1;
 	}
 	output.bg.reset();
+};
+
+/**
+ * Clamp a paddle's Y position within the game boundary
+ */
+Paddle.prototype.clamp = function() {
+	this.y = Math.max(this.y, 3);
+	this.y = Math.min(this.y, this.game.options.height - 2);
 };
 
 /**

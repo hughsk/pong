@@ -18,9 +18,10 @@ var clearScreen = function(output) {
 argv.server = argv.server || argv.S;
 argv.connect = argv.connect || argv.c;
 
+
 var game;
 if (argv.server) { // Multiplayer server!
-	require('./server.js');
+	require('./server.js')(parseInt(argv.server, 10) || 12953);
 } else {
 	clearScreen(output);
 

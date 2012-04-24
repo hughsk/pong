@@ -3,7 +3,7 @@
 var ansi = require('ansi'),
 	tty = require('tty'),
 	pong = require('./game.js'),
-	optimist = require('./args.js'),
+	optimist = require('./lib/args.js'),
 	argv = optimist.argv,
 	output = ansi(process.stdout);
 

@@ -1,13 +1,11 @@
 var _ = require('underscore'),
 	ansi = require('ansi'),
 	io = require('socket.io/node_modules/socket.io-client'),
-	BufferStream = require('./bufferstream.js'),
-	argv, optimist = require('./args.js'),
+	BufferStream = require('./lib/bufferstream.js'),
+	argv, optimist = require('./lib/args.js'),
 	Pong, Paddle, Ball;
 
-
-	
-argv = require('./args.js').argv;
+argv = optimist.argv;
 
 if (argv.help) {
 	optimist.showHelp();

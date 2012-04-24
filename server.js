@@ -36,8 +36,8 @@ module.exports = function(port) {
 
 		socket1.partner = socket2;
 		socket2.partner = socket1;
-		socket1.emit('ready');
-		socket2.emit('ready');
+		socket1.emit('ready', { width: game.options.width, height: game.options.height });
+		socket2.emit('ready', { width: game.options.width, height: game.options.height });
 
 		// Paddle Movement
 		socket1.on('up', function(fast) { game.ourPaddle.y -= !!fast ? 2: 1; });

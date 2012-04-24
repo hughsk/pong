@@ -3,7 +3,8 @@
 var ansi = require('ansi'),
 	tty = require('tty'),
 	pong = require('./game.js'),
-	argv = require('optimist').argv,
+	optimist = require('./args.js'),
+	argv = optimist.argv,
 	output = ansi(process.stdout);
 
 var clearScreen = function(output) {
@@ -13,11 +14,6 @@ var clearScreen = function(output) {
 			.goto(0, 0)
 	}
 };
-
-
-argv.server = argv.server || argv.S;
-argv.connect = argv.connect || argv.c;
-
 
 var game;
 if (argv.server) { // Multiplayer server!

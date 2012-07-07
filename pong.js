@@ -22,7 +22,7 @@ if (argv.server) { // Multiplayer server!
 	clearScreen(output);
 
 	process.openStdin();
-	tty.setRawMode(true);
+	process.stdin.setRawMode(true);
 
 	output.hide();
 }
